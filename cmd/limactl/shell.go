@@ -23,6 +23,13 @@ lima command is provided as an alias for limactl shell $LIMA_INSTANCE. $LIMA_INS
 Hint: try --debug to show the detailed logs, if it seems hanging (mostly due to some SSH issue).
 `
 
+var shellExample = `
+$ limactl shell default echo '$RANDOM'
+will output a random number
+$ limactl shell default --raw echo '$RANDOM'
+will outoput $RANDOM
+`
+
 func newShellCommand() *cobra.Command {
 	var shellCmd = &cobra.Command{
 		Use:               "shell INSTANCE [COMMAND...]",
@@ -31,11 +38,13 @@ func newShellCommand() *cobra.Command {
 		Args:              cobra.MinimumNArgs(1),
 		RunE:              shellAction,
 		ValidArgsFunction: shellBashComplete,
+		Example:           shellExample,
 	}
 
 	shellCmd.Flags().SetInterspersed(false)
 
 	shellCmd.Flags().String("workdir", "", "working directory")
+	shellCmd.Flags().Bool("raw", false, "pass raw parament to COMMAND")
 	return shellCmd
 }
 
@@ -111,9 +120,22 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	logrus.Debugf("changeDirCmd=%q", changeDirCmd)
 
 	script := fmt.Sprintf("%s ; exec bash --login", changeDirCmd)
+
+	raw, err := cmd.Flags().GetBool("raw")
+	if err != nil {
+		return err
+	}
 	if len(args) > 1 {
 		tailArgs := args[1:]
-		script += fmt.Sprintf(" -c %q", shellescape.QuoteCommand(tailArgs))
+		escapedArgs := ""
+		if raw {
+			escapedArgs = shellescape.QuoteCommand(tailArgs)
+			escapedArgs = shellescape.QuoteCommand([]string{escapedArgs})
+		} else {
+			escapedArgs = strings.Join(tailArgs, " ")
+			escapedArgs = shellescape.QuoteCommand([]string{escapedArgs})
+		}
+		script += fmt.Sprintf(" -c %s", escapedArgs)
 	}
 
 	arg0, err := exec.LookPath("ssh")
