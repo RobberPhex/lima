@@ -11,10 +11,12 @@ import (
 
 func newValidateCommand() *cobra.Command {
 	var validateCommand = &cobra.Command{
-		Use:   "validate FILE.yaml [FILE.yaml, ...]",
-		Short: "Validate YAML files",
-		Args:  cobra.MinimumNArgs(1),
-		RunE:  validateAction,
+		Use:           "validate FILE.yaml [FILE.yaml, ...]",
+		Short:         "Validate YAML files",
+		Args:          cobra.MinimumNArgs(1),
+		RunE:          validateAction,
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
 	return validateCommand
 }
